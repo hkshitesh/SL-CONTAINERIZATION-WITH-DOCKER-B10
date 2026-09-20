@@ -3,8 +3,9 @@ pipeline {
     agent any
 
     environment {
+        GITHUB_URL      = "https://github.com/hkshitesh/SL-MAVEN-8-FEB-BACTH.git"
         DOCKER_USERNAME = "YOUR_DOCKERHUB_USERNAME"
-        DOCKER_TOKEN    = "YOUR_DOCKERHUB_ACCESS_TOKEN"
+        DOCKER_PASSWORD = "YOUR_DOCKERHUB_PASSWORD"
         IMAGE_NAME      = "YOUR_DOCKERHUB_USERNAME/maven-docker-demo"
     }
 
@@ -12,7 +13,7 @@ pipeline {
 
         stage('Clone GitHub Project') {
             steps {
-                git 'https://github.com/hkshitesh/SL-MAVEN-8-FEB-BACTH.git'
+                git "${GITHUB_URL}"
             }
         }
 
@@ -32,7 +33,7 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 sh '''
-                    echo "$DOCKER_TOKEN" | docker login \
+                    echo "$DOCKER_PASSWORD" | docker login \
                     -u "$DOCKER_USERNAME" \
                     --password-stdin
                 '''
@@ -45,15 +46,25 @@ pipeline {
                 sh 'docker push ${IMAGE_NAME}:latest'
             }
         }
+
+        stage('Verify Docker Image') {
+            steps {
+                sh 'docker images | grep ${IMAGE_NAME}'
+            }
+        }
     }
 
     post {
+
         success {
-            echo 'Maven project built and Docker image pushed successfully.'
+            echo "Maven build completed successfully."
+            echo "Docker image pushed successfully to Docker Hub."
+            echo "Image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+            echo "Image: ${IMAGE_NAME}:latest"
         }
 
         failure {
-            echo 'Pipeline failed.'
+            echo "Pipeline failed."
         }
     }
 }
