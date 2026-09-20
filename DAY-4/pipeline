@@ -1,0 +1,59 @@
+pipeline {
+
+    agent any
+
+    environment {
+        DOCKER_USERNAME = "YOUR_DOCKERHUB_USERNAME"
+        DOCKER_TOKEN    = "YOUR_DOCKERHUB_ACCESS_TOKEN"
+        IMAGE_NAME      = "YOUR_DOCKERHUB_USERNAME/maven-docker-demo"
+    }
+
+    stages {
+
+        stage('Clone GitHub Project') {
+            steps {
+                git 'https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPOSITORY.git'
+            }
+        }
+
+        stage('Build Maven Project') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .'
+                sh 'docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest'
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                sh '''
+                    echo "$DOCKER_TOKEN" | docker login \
+                    -u "$DOCKER_USERNAME" \
+                    --password-stdin
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh 'docker push ${IMAGE_NAME}:${BUILD_NUMBER}'
+                sh 'docker push ${IMAGE_NAME}:latest'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Maven project built and Docker image pushed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
